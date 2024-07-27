@@ -1,0 +1,103 @@
+// pages/items.js
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import dbConnect from '../utils/dbConnect';
+import Item from '../models/Item';
+
+export default function Items() {
+  const [items, setItems] = useState([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [location, setLocation] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredItems, setFilteredItems] = useState([]);
+
+  useEffect(() => {
+    async function fetchItems() {
+      const res = await axios.get('/api/items');
+      setItems(res.data.data);
+    }
+    fetchItems();
+  }, []);
+
+  useEffect(() => {
+    setFilteredItems(
+      items.filter(
+        (item) =>
+          item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.location.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [searchTerm, items]);
+
+  const handleAddItem = async () => {
+    const newItem = {
+      title,
+      description,
+      category,
+      location,
+    };
+    const res = await axios.post('/api/items', newItem);
+    setItems([...items, res.data.data]);
+  };
+
+  return (
+    <div>
+      <h1>Items</h1>
+      <input
+        type="text"
+        placeholder="Search..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <div>
+        <h2>Add New Item</h2>
+        <input
+          type="text"
+          placeholder="Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+        />
+        <button onClick={handleAddItem}>Add Item</button>
+      </div>
+      <h2>Item Listings</h2>
+      <ul>
+        {filteredItems.map((item) => (
+          <li key={item._id}>
+            <h3>{item.title}</h3>
+            <p>{item.description}</p>
+            <p>Category: {item.category}</p>
+            <p>Location: {item.location}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Fetch initial items from server-side
+export async function getServerSideProps() {
+  await dbConnect();
+  const items = await Item.find({});
+  return { props: { items: JSON.parse(JSON.stringify(items)) } };
+}
